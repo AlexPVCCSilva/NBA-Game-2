@@ -406,19 +406,27 @@ export default function CareerSim({ player, onRestart }) {
           <div className="bg-[#111] border border-[#222] rounded-xl p-5 shadow-sm">
             <div className="text-yellow-400 text-[10px] uppercase font-bold tracking-widest mb-4 flex justify-between">
               <span>Attributes</span>
+              <span className="text-white/30">CUR / MAX</span>
             </div>
             <div className="space-y-3">
-              {Object.entries(playerAttributes).map(([key, val]) => (
-                <div key={key}>
-                  <div className="flex justify-between text-[10px] uppercase text-white/50 mb-1">
-                    <span>{key}</span>
-                    <span className="text-white font-bold">{val} <span className="text-white/30 font-normal">/ 99</span></span>
+              {Object.entries(playerAttributes).map(([key, val]) => {
+                let penalty = 0;
+                if (age < 26) penalty = (26 - age) * 2.5;
+                else if (age > 31) penalty = (age - 31) * 1.5;
+                const currentVal = Math.max(25, Math.round(val - penalty));
+                
+                return (
+                  <div key={key}>
+                    <div className="flex justify-between text-[10px] uppercase text-white/50 mb-1">
+                      <span>{key}</span>
+                      <span className="text-white font-bold">{currentVal} <span className="text-white/30 font-normal">/ {val}</span></span>
+                    </div>
+                    <div className="w-full bg-[#050505] h-1.5 rounded-full overflow-hidden border border-[#222]">
+                      <div className="bg-white h-full transition-all duration-1000" style={{ width: `${Math.min(100, currentVal)}%` }}></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-[#050505] h-1.5 rounded-full overflow-hidden border border-[#222]">
-                    <div className="bg-white h-full transition-all duration-1000" style={{ width: `${Math.min(100, val)}%` }}></div>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -664,25 +672,32 @@ export default function CareerSim({ player, onRestart }) {
                   </div>
                   
                   <div className="grid grid-cols-2 gap-3 flex-1 overflow-y-auto no-scrollbar">
-                    {Object.entries(playerAttributes).map(([key, val]) => (
-                      <div key={key} className="bg-[#0a0a0a] border border-[#222] p-3 rounded flex justify-between items-center">
-                        <div>
-                          <div className="text-[9px] text-white/40 uppercase tracking-widest">{key}</div>
-                          <div className="font-bold text-sm text-white">{val} <span className="text-white/30 font-normal">/ 99</span></div>
+                    {Object.entries(playerAttributes).map(([key, val]) => {
+                      let penalty = 0;
+                      if (age < 26) penalty = (26 - age) * 2.5;
+                      else if (age > 31) penalty = (age - 31) * 1.5;
+                      const currentVal = Math.max(25, Math.round(val - penalty));
+
+                      return (
+                        <div key={key} className="bg-[#0a0a0a] border border-[#222] p-3 rounded flex justify-between items-center">
+                          <div>
+                            <div className="text-[9px] text-white/40 uppercase tracking-widest">{key}</div>
+                            <div className="font-bold text-sm text-white">{currentVal} <span className="text-white/30 font-normal">/ {val}</span></div>
+                          </div>
+                          <button 
+                            disabled={skillPoints < 10 || val >= 99}
+                            onClick={() => {
+                              setSkillPoints(s => s - 10);
+                              setPlayerAttributes(prev => ({ ...prev, [key]: prev[key] + 1 }));
+                              setNews(prev => [...prev, `TRAINING: +1 POTENTIAL EM ${key.toUpperCase()}`]);
+                            }}
+                            className="px-2 py-1 bg-white text-black text-[9px] font-bold uppercase rounded disabled:opacity-20 disabled:bg-gray-500 transition"
+                          >
+                            +1
+                          </button>
                         </div>
-                        <button 
-                          disabled={skillPoints < 10 || val >= 99}
-                          onClick={() => {
-                            setSkillPoints(s => s - 10);
-                            setPlayerAttributes(prev => ({ ...prev, [key]: prev[key] + 1 }));
-                            setNews(prev => [...prev, `TRAINING: +1 ${key.toUpperCase()}`]);
-                          }}
-                          className="px-2 py-1 bg-white text-black text-[9px] font-bold uppercase rounded disabled:opacity-20 disabled:bg-gray-500 transition"
-                        >
-                          +1 (10 SP)
-                        </button>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}
