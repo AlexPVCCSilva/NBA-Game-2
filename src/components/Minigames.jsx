@@ -363,12 +363,16 @@ function PassGame({ onComplete, resolved, won, playerOvr }) {
 // ----------------------------------------------------
 function DriveGame({ onComplete, resolved, won, playerOvr }) {
   const containerRef = useRef(null);
-  const [timeLeft, setTimeLeft] = useState(5);
-  const [playerX, setPlayerX] = useState(150);
+  const [timeLeft, setTimeLeft] = useState(6);
+  const [playerPos, setPlayerPos] = useState({ x: 150, y: 350 });
   const [defenders, setDefenders] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
 
-  const defFallSpeed = Math.max(3, 8 - (playerOvr / 15)); 
-  const spawnRate = Math.max(300, 800 - (playerOvr * 3));
+  // Difficulty: Faster and more frequent defenders
+  const defFallSpeed = Math.max(4, 10 - (playerOvr / 15)); 
+  const spawnRate = Math.max(150, 500 - (playerOvr * 3));
+
+  const hoopPos = { x: 150, y: 30 };
 
   useEffect(() => {
     if (resolved) return;
@@ -376,7 +380,7 @@ function DriveGame({ onComplete, resolved, won, playerOvr }) {
       setTimeLeft(t => {
         if (t <= 1) {
           clearInterval(clock);
-          onComplete(true); 
+          onComplete(false); // Shot clock violation
           return 0;
         }
         return t - 1;
@@ -385,13 +389,14 @@ function DriveGame({ onComplete, resolved, won, playerOvr }) {
     return () => clearInterval(clock);
   }, [resolved, onComplete]);
 
+  // Game Loop
   useEffect(() => {
     if (resolved) return;
     
     const spawner = setInterval(() => {
       setDefenders(prev => [...prev, {
         id: Math.random(),
-        x: Math.random() * 240 + 30,
+        x: Math.random() * 260 + 20, // Spawn across width
         y: -30
       }]);
     }, spawnRate);
@@ -401,31 +406,58 @@ function DriveGame({ onComplete, resolved, won, playerOvr }) {
         let hit = false;
         const next = prev.map(d => {
           const ny = d.y + defFallSpeed;
-          const dist = Math.hypot(playerX - d.x, 320 - ny);
-          if (dist < 35) {
+          const dist = Math.hypot(playerPos.x - d.x, playerPos.y - ny);
+          if (dist < 35) { // Collision radius
              hit = true;
           }
           return { ...d, y: ny };
-        }).filter(d => d.y < 400);
+        }).filter(d => d.y < 420);
 
         if (hit) {
-          onComplete(false); 
+          onComplete(false); // Crashed into defender
         }
         return next;
       });
+
+      // Check win condition (Dunk)
+      const distToHoop = Math.hypot(playerPos.x - hoopPos.x, playerPos.y - hoopPos.y);
+      if (distToHoop < 40) {
+        onComplete(true);
+      }
+
     }, 30);
 
     return () => {
       clearInterval(spawner);
       clearInterval(mover);
     };
-  }, [resolved, playerX, defFallSpeed, spawnRate, onComplete]);
+  }, [resolved, playerPos, defFallSpeed, spawnRate, hoopPos.x, hoopPos.y, onComplete]);
 
-  const handleTap = (e) => {
+  const handlePointerDown = (e) => {
     if (resolved) return;
+    e.target.setPointerCapture(e.pointerId);
+    setIsDragging(true);
+  };
+
+  const handlePointerMove = (e) => {
+    if (!isDragging || resolved) return;
     const rect = containerRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    setPlayerX(clickX);
+    let newX = e.clientX - rect.left;
+    let newY = e.clientY - rect.top;
+    
+    // Clamp to container
+    if (newX < 20) newX = 20;
+    if (newX > rect.width - 20) newX = rect.width - 20;
+    if (newY < 20) newY = 20;
+    if (newY > rect.height - 20) newY = rect.height - 20;
+
+    setPlayerPos({ x: newX, y: newY });
+  };
+
+  const handlePointerUp = (e) => {
+    if (!isDragging || resolved) return;
+    e.target.releasePointerCapture && e.target.releasePointerCapture(e.pointerId);
+    setIsDragging(false);
   };
 
   return (
@@ -435,16 +467,24 @@ function DriveGame({ onComplete, resolved, won, playerOvr }) {
 
       <div 
         ref={containerRef}
-        className="flex-1 relative rounded-xl overflow-hidden border border-white/10 cursor-pointer bg-black/20"
-        onClick={handleTap}
+        className="flex-1 relative rounded-xl overflow-hidden border border-white/10 touch-none bg-black/20"
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerLeave={handlePointerUp}
       >
         {/* Speed lines */}
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyIiBoZWlnaHQ9IjIwIj48cmVjdCB3aWR0aD0iMiIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjA1KSIvPjwvc3ZnPg==')] animate-[slideDown_0.5s_linear_infinite]"></div>
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyIiBoZWlnaHQ9IjIwIj48cmVjdCB3aWR0aD0iMiIgaGVpZ2h0PSIyMCIgZmlsbD0icmdiYSgyNTUsIDI1NSwgMjU1LCAwLjA1KSIvPjwvc3ZnPg==')] animate-[slideDown_0.2s_linear_infinite]"></div>
+
+        {/* The Hoop */}
+        <div className="absolute w-full h-32 bg-blue-500/10 rounded-full blur-2xl" style={{ top: -20 }}></div>
+        <div className="absolute border-4 border-orange-500 rounded-full shadow-[0_0_20px_rgba(245,130,22,0.8)]" style={{ width: 60, height: 60, left: hoopPos.x - 30, top: hoopPos.y - 30 }}></div>
+        <div className="absolute w-20 h-2 bg-white/50 rounded" style={{ left: hoopPos.x - 40, top: hoopPos.y - 40 }}></div>
 
         {/* Player */}
         <div 
-          className="absolute w-12 h-12 bg-gradient-to-br from-brand-orange to-orange-700 rounded-full border-2 border-white shadow-[0_0_30px_rgba(245,130,22,1)] flex items-center justify-center transition-all duration-100 ease-out z-20"
-          style={{ left: playerX - 24, top: 320 - 24 }}
+          className={`absolute w-12 h-12 bg-gradient-to-br from-brand-orange to-orange-700 rounded-full border-2 border-white shadow-[0_0_30px_rgba(245,130,22,1)] flex items-center justify-center z-20 ${isDragging ? 'cursor-grabbing scale-110' : 'cursor-grab'}`}
+          style={{ left: playerPos.x - 24, top: playerPos.y - 24, touchAction: 'none' }}
+          onPointerDown={handlePointerDown}
         >
           <div className="w-5 h-5 bg-black/50 rounded-full backdrop-blur-sm"></div>
         </div>
