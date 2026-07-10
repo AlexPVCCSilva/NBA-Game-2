@@ -71,7 +71,7 @@ export default function CareerSim({ player, onRestart }) {
     if (isRetired || playoffs || pendingEvent || activeMinigame || freeAgencyOffers) return;
     
     // Garante 1 minigame de temporada regular antes de simular
-    let types = ['trajectory', 'pass', 'drive', 'press'];
+    let types = ['trajectory', 'pass', 'drive'];
     if (lastMinigame) {
       types = types.filter(t => t !== lastMinigame);
     }
@@ -206,7 +206,7 @@ export default function CareerSim({ player, onRestart }) {
 
     // Chance de minigame de jogo 7
     if (Math.random() < 0.35 && playoffs.bracket.round <= 4) {
-      let types = ['trajectory', 'pass', 'drive', 'press'];
+      let types = ['trajectory', 'pass', 'drive'];
       if (lastMinigame) {
         types = types.filter(t => t !== lastMinigame);
       }
