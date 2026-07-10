@@ -66,37 +66,38 @@ export default function CareerSim({ player, onRestart }) {
   }, [news]);
 
   const simulateSeason = () => {
-    if (isRetired || transferOffer || playoffs || pendingEvent || activeMinigame) return;
+    if (isRetired || playoffs || pendingEvent || activeMinigame || freeAgencyOffers) return;
+    
+    // Garante 1 minigame de temporada regular antes de simular
+    const types = ['trajectory', 'pass', 'drive', 'press'];
+    const chosen = types[Math.floor(Math.random() * types.length)];
+    setActiveMinigame(chosen);
+  };
 
-    // 40% chance of random event during season
-    if (Math.random() < 0.4) {
-      const event = seasonEvents[Math.floor(Math.random() * seasonEvents.length)];
-      setPendingEvent(event);
-      return; 
+  const processSeasonAfterMinigame = (isWin) => {
+    // Após o minigame, tem chance de ter um Evento de texto
+    if (Math.random() < 0.25) {
+      const evt = seasonEvents[Math.floor(Math.random() * seasonEvents.length)];
+      setPendingEvent(evt);
+      return; // Pausa a simulação até resolver o evento
     }
 
     processSeason();
   };
 
-  const handleEventDecision = (option) => {
-    if (option.effectType === 'CHEMISTRY') {
-      setChemistry(c => Math.max(0, Math.min(100, c + option.effectValue)));
-    } else if (option.effectType === 'OVR') {
-      setOvrBuff(b => b + option.effectValue);
+  const handleEventDecision = (opt) => {
+    if (opt.effectType === 'CHEMISTRY') {
+      setChemistry(c => Math.min(100, Math.max(0, c + opt.effectValue)));
+    } else if (opt.effectType === 'OVR_BUFF') {
+      setOvrBuff(b => b + opt.effectValue); // Bônus ou penalidade
     }
-    
-    if (option.chemValue) {
-      setChemistry(c => Math.max(0, Math.min(100, c + option.chemValue)));
-    }
-    
-    setNews(prev => [...prev, `NOTÍCIA: ${option.news}`]);
+    setNews(prev => [...prev, opt.newsMessage]);
     setPendingEvent(null);
-    processSeason();
+    processSeason(); // Segue após o evento
   };
 
   const forceTrade = () => {
-    if (isRetired || transferOffer || playoffs || pendingEvent || activeMinigame) return;
-    const newTeam = getRandomOffer(currentTeam.id);
+    const newTeam = getRandomTeam();
     setCurrentTeam(newTeam);
     setChemistry(20); 
     setNews(prev => [...prev, `BOMBA: ${player.name} força saída e é trocado para o ${newTeam.name}!`]);
@@ -216,8 +217,12 @@ export default function CareerSim({ player, onRestart }) {
       setChemistry(c => Math.max(0, c - 5)); 
     }
     setActiveMinigame(false);
-    // keep locked
-    processPlayoffRound(isWin ? 'WON' : 'LOST');
+    
+    if (playoffs && !playoffs.eliminated) {
+      processPlayoffRound(isWin ? 'WON' : 'LOST');
+    } else {
+      processSeasonAfterMinigame(isWin);
+    }
   };
 
   const processPlayoffRound = (forceGame7Result = null) => {
