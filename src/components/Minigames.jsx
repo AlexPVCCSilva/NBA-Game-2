@@ -42,15 +42,19 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [currentDrag, setCurrentDrag] = useState({ x: 0, y: 0 });
-  const [timeLeft, setTimeLeft] = useState(5);
+  const [timeLeft, setTimeLeft] = useState(6);
   
   const [ballPos, setBallPos] = useState({ x: 150, y: 300 });
+  const [hoopX, setHoopX] = useState(150);
   
-  const hoopWidth = Math.max(30, Math.floor(playerOvr * 0.8)); 
-  const hoopPos = { x: 150, y: 60 };
+  const hoopWidth = Math.max(35, Math.floor(playerOvr * 0.8)); 
+  const hoopY = 60;
+  const hoopSpeed = Math.max(1, 4 - (playerOvr / 30)); // Lower OVR = faster hoop
   
+  // Timer & Hoop Movement
   useEffect(() => {
     if (resolved) return;
+    
     const clock = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
@@ -61,8 +65,18 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
         return t - 1;
       });
     }, 1000);
-    return () => clearInterval(clock);
-  }, [resolved, onComplete]);
+
+    let currentHoopX = 150;
+    let dir = 1;
+    const mover = setInterval(() => {
+      currentHoopX += hoopSpeed * dir;
+      if (currentHoopX > 250) { currentHoopX = 250; dir = -1; }
+      if (currentHoopX < 50) { currentHoopX = 50; dir = 1; }
+      setHoopX(currentHoopX);
+    }, 30);
+
+    return () => { clearInterval(clock); clearInterval(mover); };
+  }, [resolved, hoopSpeed, onComplete]);
 
   const handlePointerDown = (e) => {
     if (resolved) return;
@@ -85,6 +99,26 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
     const gravity = 0.5;
     let hasWon = false;
 
+    // Fix hoop position at the moment of the shot for simpler calculation?
+    // No, calculate against the current hoopX state!
+    // But setInterval doesn't see fresh state. We need to use a ref or just keep it simple.
+    // Let's use a local variable that reads the DOM or we just use a loose check.
+    // Since setInterval closure captures hoopX, it won't see updates.
+    // Instead, let's use a ref for hoopX.
+  };
+
+  // Because of React closures, we must use a ref for dynamic hit detection.
+  const hoopXRef = useRef(150);
+  useEffect(() => { hoopXRef.current = hoopX; }, [hoopX]);
+
+  const doAnimateBall = (vx, vy) => {
+    let x = 150;
+    let y = 300;
+    let velX = vx * 0.15;
+    let velY = vy * 0.15;
+    const gravity = 0.4;
+    let hasWon = false;
+
     const interval = setInterval(() => {
       x += velX;
       y += velY;
@@ -92,12 +126,12 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
       
       setBallPos({ x, y });
 
-      const dist = Math.hypot(x - hoopPos.x, y - hoopPos.y);
+      const dist = Math.hypot(x - hoopXRef.current, y - hoopY);
       if (dist < (hoopWidth / 2) && !hasWon) {
         hasWon = true;
       }
 
-      if (y > 400 || x > 400 || x < -100) {
+      if (y > 400 || x > 350 || x < -50) {
         clearInterval(interval);
       }
     }, 16); 
@@ -105,7 +139,7 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
     setTimeout(() => {
        clearInterval(interval);
        onComplete(hasWon);
-    }, 1500); 
+    }, 1200); 
   };
 
   const handlePointerUp = (e) => {
@@ -116,7 +150,7 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
     const dx = dragStart.x - currentDrag.x;
     const dy = dragStart.y - currentDrag.y;
     
-    animateBall(dx, dy);
+    doAnimateBall(dx, dy);
   };
 
   const previewPoints = [];
@@ -129,7 +163,7 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
     for (let i = 0; i < 15; i++) {
       px += vx * 3;
       py += pvY * 3;
-      pvY += 0.5 * 3;
+      pvY += 0.4 * 3;
       previewPoints.push({ x: px, y: py });
     }
   }
@@ -153,15 +187,28 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
       <div className="flex-1 relative rounded-xl overflow-hidden touch-none border border-white/5 shadow-inner bg-black/20">
         
         {/* Glow do Garrafão */}
-        <div className="absolute w-40 h-40 bg-brand-orange/20 rounded-full blur-3xl" style={{ left: hoopPos.x - 80, top: hoopPos.y - 80 }}></div>
+        <div className="absolute w-40 h-40 bg-brand-orange/20 rounded-full blur-3xl transition-all" style={{ left: hoopX - 80, top: hoopY - 80 }}></div>
 
-        {/* Hoop */}
+        {/* Backboard Glass */}
+        <div className="absolute border-2 border-white/40 bg-white/10 rounded-sm backdrop-blur-sm transition-all" style={{ width: 100, height: 70, left: hoopX - 50, top: hoopY - 50 }}>
+           {/* Inner Square */}
+           <div className="absolute border-2 border-white/80 w-12 h-10 bottom-2 left-1/2 -translate-x-1/2"></div>
+        </div>
+
+        {/* Hoop Rim */}
         <div 
-          className="absolute h-3 border-b-4 border-r-4 border-red-500 rounded-b-full transition-all shadow-[0_0_15px_rgba(239,68,68,0.8)]"
-          style={{ width: hoopWidth, left: hoopPos.x - (hoopWidth / 2), top: hoopPos.y }}
+          className="absolute h-3 border-b-4 border-r-4 border-red-500 rounded-b-full transition-all shadow-[0_0_15px_rgba(239,68,68,0.8)] z-10"
+          style={{ width: hoopWidth, left: hoopX - (hoopWidth / 2), top: hoopY }}
         ></div>
-        <div className="absolute w-24 h-1.5 bg-white/80 rounded" style={{ left: hoopPos.x - 48, top: hoopPos.y - 12 }}></div>
-        <div className="absolute w-32 h-32 border-2 border-white/20 rounded-full" style={{ left: hoopPos.x - 64, top: hoopPos.y - 100 }}></div>
+        
+        {/* Hoop Net */}
+        <div 
+          className="absolute border-x border-b border-white/50 rounded-b-md transition-all border-dashed"
+          style={{ width: hoopWidth - 4, height: 20, left: hoopX - (hoopWidth / 2) + 2, top: hoopY + 3 }}
+        ></div>
+
+        {/* Base Rim connection */}
+        <div className="absolute w-6 h-1.5 bg-red-600 rounded transition-all" style={{ left: hoopX - 3, top: hoopY - 2 }}></div>
         
         {/* Trajectory */}
         {isDragging && previewPoints.map((pt, i) => (
@@ -174,7 +221,7 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
         
         {/* Ball */}
         <div 
-          className={`absolute w-8 h-8 bg-gradient-to-br from-brand-orange to-orange-700 rounded-full border border-black/50 shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_0_-2px_6px_rgba(0,0,0,0.5)] cursor-grab ${isDragging ? 'cursor-grabbing scale-110 shadow-[0_0_30px_rgba(245,130,22,0.8)]' : ''} transition-transform`}
+          className={`absolute w-8 h-8 bg-gradient-to-br from-brand-orange to-orange-700 rounded-full border border-black/50 shadow-[0_10px_20px_rgba(0,0,0,0.5),inset_0_-2px_6px_rgba(0,0,0,0.5)] cursor-grab ${isDragging ? 'cursor-grabbing scale-110 shadow-[0_0_30px_rgba(245,130,22,0.8)]' : ''} ${resolved ? 'animate-spin' : ''} transition-transform z-20`}
           style={{ left: displayBallPos.x - 16, top: displayBallPos.y - 16, touchAction: 'none' }}
           onPointerDown={handlePointerDown}
         >
@@ -182,6 +229,7 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
           <div className="absolute inset-0 border border-black/40 rounded-full"></div>
           <div className="absolute top-1/2 left-0 right-0 h-0.5 bg-black/60"></div>
           <div className="absolute left-1/2 top-0 bottom-0 w-0.5 bg-black/60"></div>
+          <div className="absolute inset-0 border-[3px] border-transparent border-t-black/30 rounded-full rotate-45"></div>
         </div>
       </div>
 
