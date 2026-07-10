@@ -412,7 +412,7 @@ export default function CareerSim({ player, onRestart }) {
                 <div key={key}>
                   <div className="flex justify-between text-[10px] uppercase text-white/50 mb-1">
                     <span>{key}</span>
-                    <span className="text-white font-bold">{val}</span>
+                    <span className="text-white font-bold">{val} <span className="text-white/30 font-normal">/ 99</span></span>
                   </div>
                   <div className="w-full bg-[#050505] h-1.5 rounded-full overflow-hidden border border-[#222]">
                     <div className="bg-white h-full transition-all duration-1000" style={{ width: `${Math.min(100, val)}%` }}></div>
@@ -668,7 +668,7 @@ export default function CareerSim({ player, onRestart }) {
                       <div key={key} className="bg-[#0a0a0a] border border-[#222] p-3 rounded flex justify-between items-center">
                         <div>
                           <div className="text-[9px] text-white/40 uppercase tracking-widest">{key}</div>
-                          <div className="font-bold text-sm text-white">{val}</div>
+                          <div className="font-bold text-sm text-white">{val} <span className="text-white/30 font-normal">/ 99</span></div>
                         </div>
                         <button 
                           disabled={skillPoints < 10 || val >= 99}
