@@ -7,6 +7,7 @@ const STATS = ['shooting', 'playmaking', 'finishing', 'defense', 'rebounding', '
 export default function Game() {
   const [name, setName] = useState('');
   const [pos, setPos] = useState('PG');
+  const [jerseyNumber, setJerseyNumber] = useState('10');
   const [step, setStep] = useState('SETUP'); // SETUP, DRAFT, RESULT
 
   const [availableStats, setAvailableStats] = useState([...STATS]);
@@ -69,6 +70,7 @@ export default function Game() {
     const playerObj = {
       name,
       pos,
+      number: jerseyNumber || '0',
       shooting,
       playmaking,
       finishing,
@@ -102,15 +104,30 @@ export default function Game() {
             <p className="text-white/60 mt-2 font-light">Molde o futuro roubando a essência do passado.</p>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <label className="text-xs uppercase tracking-[0.2em] text-brand-orange font-bold ml-2">Nome do Jogador</label>
-            <input 
-              className="bg-white/5 border border-white/10 rounded-xl p-4 text-2xl font-display outline-none focus:border-brand-orange focus:bg-brand-orange/5 text-white transition-all shadow-inner"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Ex: Air Alex"
-              maxLength={20}
-            />
+          <div className="flex gap-4">
+            <div className="flex-1 flex flex-col gap-2">
+              <label className="text-xs uppercase tracking-[0.2em] text-brand-orange font-bold ml-2">Nome do Jogador</label>
+              <input 
+                className="bg-white/5 border border-white/10 rounded-xl p-4 text-2xl font-display outline-none focus:border-brand-orange focus:bg-brand-orange/5 text-white transition-all shadow-inner"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Ex: Air Alex"
+                maxLength={20}
+              />
+            </div>
+            
+            <div className="w-28 flex flex-col gap-2">
+              <label className="text-xs uppercase tracking-[0.2em] text-brand-orange font-bold ml-2 text-center">Nº</label>
+              <input 
+                type="number"
+                className="bg-white/5 border border-white/10 rounded-xl p-4 text-2xl font-display outline-none focus:border-brand-orange focus:bg-brand-orange/5 text-white transition-all shadow-inner text-center"
+                value={jerseyNumber}
+                onChange={e => setJerseyNumber(e.target.value)}
+                min="0"
+                max="99"
+                maxLength={2}
+              />
+            </div>
           </div>
 
           <div className="flex flex-col gap-2">

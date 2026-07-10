@@ -381,7 +381,7 @@ export default function CareerSim({ player, onRestart }) {
                 <div className="text-[10px] text-white/40 uppercase tracking-widest mb-1">OVR</div>
                 <div className="text-6xl font-display text-yellow-400 leading-none">{calculateCurrentOvr(maxOvr, age, false)}</div>
               </div>
-              <div className="text-4xl font-display text-white/10">#10</div>
+              <div className="text-4xl font-display text-white/10">#{player.number || '0'}</div>
             </div>
 
             <hr className="border-[#222] my-4" />
