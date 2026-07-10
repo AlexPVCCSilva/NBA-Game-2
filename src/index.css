@@ -1,0 +1,21 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-orange: #F58216;
+  --color-brand-dark: #0f0f0f;
+  --color-brand-panel: #1a1a1a;
+  
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Bebas Neue', 'Oswald', sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-brand-dark text-white font-sans;
+  }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
+}
