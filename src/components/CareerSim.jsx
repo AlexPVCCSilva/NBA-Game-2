@@ -199,7 +199,7 @@ export default function CareerSim({ player, onRestart }) {
 
     // Chance de minigame de jogo 7
     if (Math.random() < 0.35 && playoffs.bracket.round <= 4) {
-      const types = ['clutch', 'trajectory', 'memory', 'combine', 'press'];
+      const types = ['trajectory', 'pass', 'drive', 'press'];
       const chosen = types[Math.floor(Math.random() * types.length)];
       setActiveMinigame(chosen);
       // DO NOT unlock isAdvancingRef here! Wait for Minigame to finish!

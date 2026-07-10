@@ -1,94 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 
 // ----------------------------------------------------
-// GAME 0: CLUTCH TIME (BARRA VERDE)
-// ----------------------------------------------------
-function ClutchGame({ onComplete, resolved, won, playerOvr }) {
-  const [progress, setProgress] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(5);
-  const dirRef = useRef(1);
-
-  // Calcula a dificuldade baseado no OVR
-  // Velocidade: maior OVR = intervalo maior = barra mais lenta
-  const speedMs = Math.max(10, Math.floor(playerOvr / 4)); // OVR 99 ~ 24ms, OVR 60 ~ 15ms
-  
-  // Tamanho do alvo: maior OVR = alvo maior
-  const targetWidth = Math.floor(playerOvr / 8); // OVR 99 ~ 12%, OVR 60 ~ 7%
-  const targetStart = 75;
-  const targetEnd = targetStart + targetWidth;
-
-  useEffect(() => {
-    if (resolved) return;
-    
-    // Shot clock timer
-    const clock = setInterval(() => {
-      setTimeLeft(t => {
-        if (t <= 1) {
-          clearInterval(clock);
-          onComplete(false); // Estouro de cronômetro
-          return 0;
-        }
-        return t - 1;
-      });
-    }, 1000);
-
-    const interval = setInterval(() => {
-      setProgress(p => {
-        let next = p + dirRef.current * 3;
-        if (next >= 100) { next = 100; dirRef.current = -1; }
-        if (next <= 0) { next = 0; dirRef.current = 1; }
-        return next;
-      });
-    }, speedMs);
-    
-    return () => { clearInterval(interval); clearInterval(clock); };
-  }, [resolved, onComplete, speedMs]);
-
-  const handleShoot = () => {
-    if (resolved) return;
-    const isWin = progress >= targetStart && progress <= targetEnd;
-    onComplete(isWin);
-  };
-
-  return (
-    <div className="absolute inset-0 z-50 bg-[#111] flex flex-col items-center justify-center p-6 border border-red-500/30 rounded-xl">
-      <div className="text-red-500 font-display text-3xl mb-1">CLUTCH TIME!</div>
-      <div className="text-white/60 mb-8 text-center text-xs flex gap-2 items-center">
-        Game 7. Shot in the green. 
-        <span className="bg-red-500/20 text-red-500 border border-red-500 px-2 py-0.5 font-bold rounded">
-          {timeLeft}s
-        </span>
-      </div>
-      
-      <div className="w-full max-w-sm bg-[#050505] h-6 rounded-full mb-8 relative border border-[#222]">
-        <div 
-          className="absolute top-0 bottom-0 bg-green-500 transition-all"
-          style={{ left: `${targetStart}%`, right: `${100 - targetEnd}%` }}
-        ></div>
-        <div 
-          className="absolute top-0 bottom-0 w-1 bg-white shadow-[0_0_10px_white]"
-          style={{ left: `${progress}%` }}
-        ></div>
-      </div>
-
-      {!resolved ? (
-        <button 
-          onClick={handleShoot}
-          className="px-10 py-3 bg-red-600 text-white font-bold text-xs uppercase tracking-widest rounded hover:bg-red-500 transition"
-        >
-          Shoot
-        </button>
-      ) : (
-        <div className={`font-display text-2xl ${won ? 'text-green-500' : 'text-red-600'}`}>
-          {won ? 'GREEN RELEASE!' : 'BRICK...'}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ----------------------------------------------------
-// GAME 1: BUZZER BEATER (TRAJETÓRIA)
+// GAME 1: THE SHOT (Arremesso)
 // ----------------------------------------------------
 function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
   const containerRef = useRef(null);
@@ -97,12 +10,11 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
   const [currentDrag, setCurrentDrag] = useState({ x: 0, y: 0 });
   const [timeLeft, setTimeLeft] = useState(5);
   
-  const [ballPos, setBallPos] = useState({ x: 50, y: 200 });
+  const [ballPos, setBallPos] = useState({ x: 150, y: 300 });
   
   // Dificuldade por OVR (tamanho do aro)
-  // OVR 99 -> aro de 50px, OVR 60 -> aro de 30px
-  const hoopWidth = Math.max(25, Math.floor(playerOvr / 2));
-  const hoopPos = { x: 280, y: 50 };
+  const hoopWidth = Math.max(30, Math.floor(playerOvr * 0.8)); // 99 OVR -> ~80px
+  const hoopPos = { x: 150, y: 60 };
   
   useEffect(() => {
     if (resolved) return;
@@ -110,7 +22,7 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
       setTimeLeft(t => {
         if (t <= 1) {
           clearInterval(clock);
-          onComplete(false); // Estouro
+          onComplete(false); // Shot clock violation
           return 0;
         }
         return t - 1;
@@ -133,8 +45,8 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
   };
 
   const animateBall = (vx, vy) => {
-    let x = 50;
-    let y = 200;
+    let x = 150;
+    let y = 300;
     let velX = vx * 0.15;
     let velY = vy * 0.15;
     const gravity = 0.5;
@@ -148,12 +60,11 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
       setBallPos({ x, y });
 
       const dist = Math.hypot(x - hoopPos.x, y - hoopPos.y);
-      // Margem de acerto dinâmica baseada no aro
       if (dist < (hoopWidth / 2) && !hasWon) {
         hasWon = true;
       }
 
-      if (y > 300 || x > 400 || x < 0) {
+      if (y > 400 || x > 400 || x < -100) {
         clearInterval(interval);
       }
     }, 16); 
@@ -179,8 +90,8 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
   if (isDragging) {
     const vx = (dragStart.x - currentDrag.x) * 0.15;
     const vy = (dragStart.y - currentDrag.y) * 0.15;
-    let px = 50;
-    let py = 200;
+    let px = 150;
+    let py = 300;
     let pvY = vy;
     for (let i = 0; i < 15; i++) {
       px += vx * 3;
@@ -198,47 +109,55 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
   return (
     <div 
       ref={containerRef}
-      className="absolute inset-0 z-50 bg-[#111] flex flex-col p-6 border border-brand-orange/30 rounded-xl overflow-hidden select-none"
+      className="absolute inset-0 z-50 bg-[#2a4521] flex flex-col p-6 border border-brand-orange/30 rounded-xl overflow-hidden select-none"
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
     >
-      <div className="text-brand-orange uppercase tracking-widest text-[10px] font-bold mb-2 flex justify-between w-full">
-        <span>Buzzer Beater</span>
-        <span className="text-red-500">{timeLeft}s</span>
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, #fff 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #fff 20px)' }}></div>
+      
+      <div className="text-white uppercase tracking-widest text-[10px] font-bold mb-2 flex justify-between w-full relative z-10">
+        <span>The Shot</span>
+        <span className="text-red-400 bg-black/50 px-2 py-0.5 rounded">{timeLeft}s</span>
       </div>
-      <h2 className="text-xl font-bold text-white mb-1">Game 7. Last Possession.</h2>
-      <p className="text-white/60 text-xs mb-4">Pull the ball backwards and release to shoot.</p>
+      <h2 className="text-xl font-bold text-white mb-1 relative z-10">Clutch Moment</h2>
+      <p className="text-white/80 text-xs mb-4 relative z-10">Pull back to aim and shoot.</p>
 
-      <div className="flex-1 relative border border-[#222] bg-[#0a0a0a] rounded-lg overflow-hidden touch-none">
+      <div className="flex-1 relative bg-orange-900/40 rounded-lg overflow-hidden touch-none border border-orange-500/30">
         
-        {/* Dynamic Hoop */}
+        {/* Hoop */}
         <div 
-          className="absolute h-2 border-b-2 border-r-2 border-red-500 rounded-b-full transition-all"
+          className="absolute h-3 border-b-4 border-r-4 border-red-500 rounded-b-full transition-all"
           style={{ width: hoopWidth, left: hoopPos.x - (hoopWidth / 2), top: hoopPos.y }}
         ></div>
-        <div className="absolute w-2 h-16 bg-white/20" style={{ left: hoopPos.x + (hoopWidth / 2), top: hoopPos.y - 10 }}></div>
+        <div className="absolute w-24 h-1 bg-white/40" style={{ left: hoopPos.x - 48, top: hoopPos.y - 12 }}></div>
+        <div className="absolute w-32 h-32 border border-white/20 rounded-full" style={{ left: hoopPos.x - 64, top: hoopPos.y - 100 }}></div>
         
-        {/* Trajectory Preview */}
+        {/* Trajectory */}
         {isDragging && previewPoints.map((pt, i) => (
           <div 
             key={i} 
-            className="absolute w-1 h-1 bg-white/30 rounded-full"
+            className="absolute w-1.5 h-1.5 bg-white/50 rounded-full"
             style={{ left: pt.x, top: pt.y }}
           ></div>
         ))}
         
         {/* Ball */}
         <div 
-          className={`absolute w-6 h-6 bg-brand-orange rounded-full border border-black shadow-[0_0_10px_rgba(245,130,22,0.5)] cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`}
+          className={`absolute w-6 h-6 bg-brand-orange rounded-full border border-black shadow-[0_0_15px_rgba(245,130,22,0.8)] cursor-grab ${isDragging ? 'cursor-grabbing' : ''}`}
           style={{ left: displayBallPos.x - 12, top: displayBallPos.y - 12, touchAction: 'none' }}
           onPointerDown={handlePointerDown}
-        ></div>
+        >
+          {/* Linhas da bola */}
+          <div className="absolute inset-0 border border-black/30 rounded-full"></div>
+          <div className="absolute top-1/2 left-0 right-0 h-px bg-black/40"></div>
+          <div className="absolute left-1/2 top-0 bottom-0 w-px bg-black/40"></div>
+        </div>
       </div>
 
       {resolved && (
         <div className={`absolute inset-0 flex items-center justify-center font-display text-5xl bg-black/80 z-50 ${won ? 'text-green-500' : 'text-red-600'}`}>
-          {won ? 'SWISH!' : 'BRICK...'}
+          {won ? 'SWISH!' : 'BRICK!'}
         </div>
       )}
     </div>
@@ -246,93 +165,190 @@ function TrajectoryGame({ onComplete, resolved, won, playerOvr }) {
 }
 
 // ----------------------------------------------------
-// GAME 3: MEMORY PLAYBOOK
+// GAME 2: THE VISION (Passe)
 // ----------------------------------------------------
-function MemoryGame({ onComplete, resolved, won, playerOvr }) {
-  const [sequence, setSequence] = useState([]);
-  const [playerSeq, setPlayerSeq] = useState([]);
-  const [flashIndex, setFlashIndex] = useState(-1);
-  const [isShowing, setIsShowing] = useState(true);
+function PassGame({ onComplete, resolved, won, playerOvr }) {
+  const containerRef = useRef(null);
+  const [isPassing, setIsPassing] = useState(false);
   const [timeLeft, setTimeLeft] = useState(5);
+  
+  // Game state
+  const [ballPos, setBallPos] = useState({ x: 150, y: 320 });
+  const [teammate, setTeammate] = useState({ x: 150, y: 50, dir: 1 });
+  const [defenders, setDefenders] = useState([
+    { x: 100, y: 150, dir: 1, speed: 2 },
+    { x: 200, y: 220, dir: -1, speed: 2.5 }
+  ]);
 
-  // Dificuldade por OVR
-  // OVR 99 -> tempo entre flashes 800ms
-  // OVR 60 -> tempo entre flashes 400ms (rápido!)
-  const flashSpeed = Math.max(300, Math.floor(playerOvr * 8));
-
-  useEffect(() => {
-    if (resolved) return;
-    const seq = Array.from({length: 4}, () => Math.floor(Math.random() * 4));
-    setSequence(seq);
-    
-    let step = 0;
-    const interval = setInterval(() => {
-      if (step < seq.length) {
-        setFlashIndex(seq[step]);
-        setTimeout(() => setFlashIndex(-1), flashSpeed / 2);
-        step++;
-      } else {
-        setIsShowing(false);
-        clearInterval(interval);
-      }
-    }, flashSpeed);
-
-    return () => clearInterval(interval);
-  }, [resolved, flashSpeed]);
+  const teammateWidth = 40;
+  const defenderWidth = 35;
+  
+  // Dificuldade (Velocidade dos defensores e do companheiro)
+  // OVR 99 -> defensores lentos, alvo rápido
+  const defSpeedMod = Math.max(0.5, 3 - (playerOvr / 35)); 
 
   useEffect(() => {
-    if (resolved || isShowing) return;
+    if (resolved || isPassing) return;
     const clock = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
           clearInterval(clock);
-          onComplete(false);
+          onComplete(false); // Shot clock violation
           return 0;
         }
         return t - 1;
       });
     }, 1000);
     return () => clearInterval(clock);
-  }, [resolved, isShowing, onComplete]);
+  }, [resolved, isPassing, onComplete]);
 
-  const handlePadClick = (idx) => {
-    if (isShowing || resolved) return;
-    const newPlayerSeq = [...playerSeq, idx];
-    setPlayerSeq(newPlayerSeq);
+  // Game Loop para movimentação
+  useEffect(() => {
+    if (resolved || isPassing) return;
+    const loop = setInterval(() => {
+      // Move teammate
+      setTeammate(t => {
+        let nx = t.x + (4 * t.dir);
+        let ndir = t.dir;
+        if (nx > 260) { nx = 260; ndir = -1; }
+        if (nx < 40) { nx = 40; ndir = 1; }
+        return { ...t, x: nx, dir: ndir };
+      });
+
+      // Move defenders
+      setDefenders(defs => defs.map(d => {
+        let nx = d.x + (d.speed * defSpeedMod * d.dir);
+        let ndir = d.dir;
+        if (nx > 280) { nx = 280; ndir = -1; }
+        if (nx < 20) { nx = 20; ndir = 1; }
+        return { ...d, x: nx, dir: ndir };
+      }));
+    }, 30);
+    return () => clearInterval(loop);
+  }, [resolved, isPassing, defSpeedMod]);
+
+  const handleContainerClick = (e) => {
+    if (resolved || isPassing) return;
     
-    const currentStep = newPlayerSeq.length - 1;
-    if (newPlayerSeq[currentStep] !== sequence[currentStep]) {
-      onComplete(false);
-      return;
-    }
-    
-    if (newPlayerSeq.length === sequence.length) {
-      onComplete(true);
-    }
+    // Calcula o destino do passe (onde clicou)
+    const rect = containerRef.current.getBoundingClientRect();
+    const targetX = e.clientX - rect.left;
+    const targetY = e.clientY - rect.top;
+
+    setIsPassing(true);
+
+    const startX = ballPos.x;
+    const startY = ballPos.y;
+    const angle = Math.atan2(targetY - startY, targetX - startX);
+    const speed = 12;
+
+    let currX = startX;
+    let currY = startY;
+    let hasResolved = false;
+
+    const passLoop = setInterval(() => {
+      currX += Math.cos(angle) * speed;
+      currY += Math.sin(angle) * speed;
+      
+      setBallPos({ x: currX, y: currY });
+
+      // Collision checks current positions (since defenders freeze while passing for simplicity, 
+      // but if we want them to keep moving, we should use state refs. For NSS style, freezing or predicting is fine.
+      // We will check collision with current react state closures, which means hitboxes are fixed at the moment of pass.
+      
+      // Checa colisão com defensores
+      for (const d of defenders) {
+        const dist = Math.hypot(currX - d.x, currY - d.y);
+        if (dist < (defenderWidth/2 + 10)) {
+          clearInterval(passLoop);
+          if (!hasResolved) {
+            hasResolved = true;
+            onComplete(false); // Intercepted
+          }
+          return;
+        }
+      }
+
+      // Checa colisão com companheiro
+      const distToTeammate = Math.hypot(currX - teammate.x, currY - teammate.y);
+      if (distToTeammate < (teammateWidth/2 + 15)) {
+        clearInterval(passLoop);
+        if (!hasResolved) {
+          hasResolved = true;
+          onComplete(true); // Assist
+        }
+        return;
+      }
+
+      // Out of bounds
+      if (currY < 0 || currY > 400 || currX < 0 || currX > 300) {
+        clearInterval(passLoop);
+        if (!hasResolved) {
+          hasResolved = true;
+          onComplete(false); // Bad pass
+        }
+      }
+
+    }, 16);
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-[#111] flex flex-col items-center justify-center p-6 border border-yellow-500/30 rounded-xl">
-      <div className="text-yellow-500 uppercase tracking-widest text-[10px] font-bold mb-2 flex justify-between w-full max-w-[250px]">
-        <span>Coach's Playbook</span>
-        {!isShowing && <span className="text-red-500">{timeLeft}s</span>}
-      </div>
-      <h2 className="text-xl font-bold text-white mb-6">Memorize the Sequence</h2>
+    <div 
+      className="absolute inset-0 z-50 bg-[#2a4521] flex flex-col p-6 border border-brand-orange/30 rounded-xl overflow-hidden select-none"
+    >
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, #fff 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #fff 20px)' }}></div>
       
-      <div className="grid grid-cols-2 gap-4 w-full max-w-[250px] aspect-square p-4 bg-[#0a0a0a] rounded-lg border border-[#222]">
-        {[0,1,2,3].map(i => (
-          <button
+      <div className="text-yellow-400 uppercase tracking-widest text-[10px] font-bold mb-2 flex justify-between w-full relative z-10">
+        <span>The Vision</span>
+        <span className="text-red-400 bg-black/50 px-2 py-0.5 rounded">{timeLeft}s</span>
+      </div>
+      <h2 className="text-xl font-bold text-white mb-1 relative z-10">Find the Open Man</h2>
+      <p className="text-white/80 text-xs mb-4 relative z-10">Tap anywhere to pass. Don't get intercepted!</p>
+
+      <div 
+        ref={containerRef}
+        className="flex-1 relative bg-orange-900/20 rounded-lg overflow-hidden border border-orange-500/30 cursor-crosshair"
+        onClick={handleContainerClick}
+      >
+        {/* Teammate */}
+        <div 
+          className="absolute bg-blue-500 rounded-full border-2 border-white flex items-center justify-center font-bold text-white text-xs shadow-[0_0_15px_rgba(59,130,246,0.6)]"
+          style={{ width: teammateWidth, height: teammateWidth, left: teammate.x - teammateWidth/2, top: teammate.y - teammateWidth/2 }}
+        >
+          99
+        </div>
+
+        {/* Defenders */}
+        {defenders.map((d, i) => (
+          <div 
             key={i}
-            disabled={isShowing || resolved}
-            onClick={() => handlePadClick(i)}
-            className={`rounded-lg transition duration-200 border border-[#333] ${flashIndex === i ? 'bg-yellow-400 scale-95 shadow-[0_0_15px_rgba(250,204,21,0.5)]' : 'bg-[#111] hover:bg-[#222]'}`}
-          ></button>
+            className="absolute bg-red-600 rounded-full border-2 border-black flex items-center justify-center font-bold text-white text-xs"
+            style={{ width: defenderWidth, height: defenderWidth, left: d.x - defenderWidth/2, top: d.y - defenderWidth/2 }}
+          >
+            D
+          </div>
         ))}
+
+        {/* You (Player) */}
+        {!isPassing && (
+          <div 
+            className="absolute w-8 h-8 bg-brand-orange rounded-full border-2 border-white flex items-center justify-center"
+            style={{ left: ballPos.x - 16, top: ballPos.y - 16 }}
+          >
+            U
+          </div>
+        )}
+
+        {/* Ball */}
+        <div 
+          className="absolute w-5 h-5 bg-brand-orange rounded-full border border-black shadow-[0_0_10px_rgba(245,130,22,0.8)]"
+          style={{ left: ballPos.x - 10, top: ballPos.y - 10 }}
+        ></div>
       </div>
 
       {resolved && (
-        <div className={`absolute inset-0 flex items-center justify-center font-display text-4xl bg-black/80 z-50 ${won ? 'text-green-500' : 'text-red-600'}`}>
-          {won ? 'PERFECT PLAY!' : 'TURNOVER...'}
+        <div className={`absolute inset-0 flex items-center justify-center font-display text-5xl bg-black/80 z-50 ${won ? 'text-green-500' : 'text-red-600'}`}>
+          {won ? 'DIME!' : 'TURNOVER!'}
         </div>
       )}
     </div>
@@ -340,69 +356,131 @@ function MemoryGame({ onComplete, resolved, won, playerOvr }) {
 }
 
 // ----------------------------------------------------
-// GAME 4: DRAFT COMBINE
+// GAME 3: THE DRIVE (Infiltração)
 // ----------------------------------------------------
-function CombineGame({ onComplete, resolved, won, playerOvr }) {
-  const [activeIdx, setActiveIdx] = useState(-1);
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(10);
-  
-  // Dificuldade por OVR
-  // OVR 99 -> Spawn lento (600ms), Alvo mínimo (6)
-  // OVR 60 -> Spawn rápido (400ms), Alvo alto (9)
-  const spawnSpeed = Math.max(300, 200 + Math.floor(playerOvr * 4));
-  const winScore = Math.max(4, 12 - Math.floor(playerOvr / 15));
-  
+function DriveGame({ onComplete, resolved, won, playerOvr }) {
+  const containerRef = useRef(null);
+  const [timeLeft, setTimeLeft] = useState(5);
+  const [playerX, setPlayerX] = useState(150);
+  const [defenders, setDefenders] = useState([]);
+
+  // Dificuldade
+  // OVR 99 -> Defensores caem devagar
+  const defFallSpeed = Math.max(3, 8 - (playerOvr / 15)); 
+  const spawnRate = Math.max(300, 800 - (playerOvr * 3));
+
   useEffect(() => {
     if (resolved) return;
-    const timer = setInterval(() => {
+    const clock = setInterval(() => {
       setTimeLeft(t => {
         if (t <= 1) {
-          clearInterval(timer);
-          onComplete(score >= winScore); 
+          clearInterval(clock);
+          onComplete(true); // Se sobreviveu 5 segundos, chegou na cesta!
           return 0;
         }
         return t - 1;
       });
     }, 1000);
-    return () => clearInterval(timer);
-  }, [resolved, score, onComplete, winScore]);
+    return () => clearInterval(clock);
+  }, [resolved, onComplete]);
 
+  // Game Loop
   useEffect(() => {
     if (resolved) return;
+    
+    // Spawner
     const spawner = setInterval(() => {
-      setActiveIdx(Math.floor(Math.random() * 9));
-    }, spawnSpeed);
-    return () => clearInterval(spawner);
-  }, [resolved, spawnSpeed]);
+      setDefenders(prev => [...prev, {
+        id: Math.random(),
+        x: Math.random() * 240 + 30, // Random X
+        y: -30
+      }]);
+    }, spawnRate);
 
-  const handleHit = (idx) => {
-    if (resolved || idx !== activeIdx) return;
-    setScore(s => s + 1);
-    setActiveIdx(-1);
+    // Mover defensores
+    const mover = setInterval(() => {
+      setDefenders(prev => {
+        let hit = false;
+        const next = prev.map(d => {
+          const ny = d.y + defFallSpeed;
+          // Collision check
+          const dist = Math.hypot(playerX - d.x, 320 - ny);
+          if (dist < 30) {
+             hit = true;
+          }
+          return { ...d, y: ny };
+        }).filter(d => d.y < 400);
+
+        if (hit) {
+          onComplete(false); // Trombou no defensor
+        }
+        return next;
+      });
+    }, 30);
+
+    return () => {
+      clearInterval(spawner);
+      clearInterval(mover);
+    };
+  }, [resolved, playerX, defFallSpeed, spawnRate, onComplete]);
+
+  const handleTap = (e) => {
+    if (resolved) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const clickX = e.clientX - rect.left;
+    
+    // Move towards click but clamp
+    setPlayerX(clickX);
   };
 
   return (
-    <div className="absolute inset-0 z-50 bg-[#111] flex flex-col items-center p-6 border border-blue-500/30 rounded-xl">
-      <div className="w-full flex justify-between items-center mb-4 text-white">
-        <div>TIME: <span className="text-blue-400 font-bold">{timeLeft}s</span></div>
-        <div>SCORE: <span className="text-yellow-400 font-bold">{score}/{winScore}</span></div>
-      </div>
+    <div 
+      className="absolute inset-0 z-50 bg-[#2a4521] flex flex-col p-6 border border-brand-orange/30 rounded-xl overflow-hidden select-none"
+    >
+      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 19px, #fff 20px), repeating-linear-gradient(90deg, transparent, transparent 19px, #fff 20px)' }}></div>
       
-      <div className="grid grid-cols-3 gap-2 w-full aspect-square max-w-[250px] bg-[#0a0a0a] p-2 rounded-lg border border-[#222]">
-        {[0,1,2,3,4,5,6,7,8].map(i => (
-          <button
-            key={i}
-            onClick={() => handleHit(i)}
-            disabled={resolved}
-            className={`rounded-md transition-all ${activeIdx === i ? 'bg-blue-500 scale-95 shadow-[0_0_10px_rgba(59,130,246,0.6)]' : 'bg-[#111]'}`}
-          ></button>
+      <div className="text-blue-400 uppercase tracking-widest text-[10px] font-bold mb-2 flex justify-between w-full relative z-10">
+        <span>The Drive</span>
+        <span className="text-yellow-400 bg-black/50 px-2 py-0.5 rounded">{timeLeft}s to Rim</span>
+      </div>
+      <h2 className="text-xl font-bold text-white mb-1 relative z-10">Attack the Paint</h2>
+      <p className="text-white/80 text-xs mb-4 relative z-10">Tap left/right to dodge defenders!</p>
+
+      <div 
+        ref={containerRef}
+        className="flex-1 relative bg-orange-900/20 rounded-lg overflow-hidden border border-orange-500/30 cursor-pointer"
+        onClick={handleTap}
+      >
+        {/* Parquet floor lines */}
+        <div className="absolute inset-x-0 top-0 bottom-0 flex justify-evenly opacity-10">
+          <div className="w-px bg-white"></div>
+          <div className="w-px bg-white"></div>
+          <div className="w-px bg-white"></div>
+        </div>
+
+        {/* Player */}
+        <div 
+          className="absolute w-10 h-10 bg-brand-orange rounded-full border-2 border-white shadow-[0_0_20px_rgba(245,130,22,0.8)] flex items-center justify-center transition-all duration-100 ease-out z-20"
+          style={{ left: playerX - 20, top: 320 - 20 }}
+        >
+          <div className="w-4 h-4 bg-black rounded-full opacity-50"></div>
+        </div>
+
+        {/* Defenders */}
+        {defenders.map(d => (
+          <div 
+            key={d.id}
+            className="absolute w-10 h-10 bg-red-600 rounded-full border-2 border-black flex items-center justify-center font-bold text-white text-xs z-10"
+            style={{ left: d.x - 20, top: d.y - 20 }}
+          >
+            D
+          </div>
         ))}
       </div>
 
       {resolved && (
-        <div className={`absolute inset-0 flex items-center justify-center font-display text-4xl bg-black/80 z-50 ${won ? 'text-green-500' : 'text-red-600'}`}>
-          {won ? 'BEAST MODE!' : 'TOO SLOW...'}
+        <div className={`absolute inset-0 flex items-center justify-center font-display text-5xl bg-black/80 z-50 ${won ? 'text-green-500' : 'text-red-600'}`}>
+          {won ? 'POSTERIZED!' : 'BLOCKED!'}
         </div>
       )}
     </div>
@@ -410,7 +488,7 @@ function CombineGame({ onComplete, resolved, won, playerOvr }) {
 }
 
 // ----------------------------------------------------
-// GAME 5: PRESS CONFERENCE
+// GAME 4: PRESS CONFERENCE
 // ----------------------------------------------------
 function PressGame({ onComplete, resolved, won }) {
   const [timeLeft, setTimeLeft] = useState(3); 
@@ -440,7 +518,7 @@ function PressGame({ onComplete, resolved, won }) {
       <div className="text-purple-500 uppercase tracking-widest text-[10px] font-bold mb-2">Press Conference</div>
       <div className="text-white/40 text-xs mb-4">You have <span className="text-white font-bold">{timeLeft}s</span> to answer.</div>
       
-      <div className="bg-[#222] p-4 rounded-lg mb-4 text-white text-sm italic">
+      <div className="bg-[#222] p-4 rounded-lg mb-4 text-white text-sm italic border-l-4 border-purple-500">
         "Tough game tonight. What are your thoughts on the team's performance?"
       </div>
 
@@ -449,7 +527,7 @@ function PressGame({ onComplete, resolved, won }) {
           <button
             key={i}
             onClick={() => onComplete(opt.win)}
-            className="text-left bg-[#0a0a0a] border border-[#333] hover:border-purple-500 text-white/80 p-3 rounded text-xs transition"
+            className="text-left bg-[#0a0a0a] border border-[#333] hover:border-purple-500 text-white/80 p-3 rounded text-xs transition hover:translate-x-2"
           >
             "{opt.text}"
           </button>
@@ -458,7 +536,7 @@ function PressGame({ onComplete, resolved, won }) {
 
       {resolved && (
         <div className={`absolute inset-0 flex flex-col items-center justify-center font-display text-4xl bg-black/80 z-50 ${won ? 'text-green-500' : 'text-red-600'}`}>
-          {won ? 'GOOD PR!' : 'CONTROVERSY...'}
+          {won ? 'GOOD PR!' : 'CONTROVERSY!'}
           <div className="text-xs text-white/50 font-sans mt-2 tracking-widest uppercase">
             {won ? 'Chemistry +15' : 'Chemistry -5'}
           </div>
@@ -477,7 +555,6 @@ export default function Minigames({ gameType, onComplete, playerOvr = 75 }) {
     setResolved(true);
     setWon(isWin);
     
-    // Sons foram removidos a pedido do usuário
     setTimeout(() => {
       onComplete(isWin);
     }, 1500);
@@ -487,16 +564,12 @@ export default function Minigames({ gameType, onComplete, playerOvr = 75 }) {
     return <TrajectoryGame onComplete={handleComplete} resolved={resolved} won={won} playerOvr={playerOvr} />;
   }
 
-  if (gameType === 'clutch') {
-    return <ClutchGame onComplete={handleComplete} resolved={resolved} won={won} playerOvr={playerOvr} />;
+  if (gameType === 'pass') {
+    return <PassGame onComplete={handleComplete} resolved={resolved} won={won} playerOvr={playerOvr} />;
   }
 
-  if (gameType === 'memory') {
-    return <MemoryGame onComplete={handleComplete} resolved={resolved} won={won} playerOvr={playerOvr} />;
-  }
-
-  if (gameType === 'combine') {
-    return <CombineGame onComplete={handleComplete} resolved={resolved} won={won} playerOvr={playerOvr} />;
+  if (gameType === 'drive') {
+    return <DriveGame onComplete={handleComplete} resolved={resolved} won={won} playerOvr={playerOvr} />;
   }
 
   if (gameType === 'press') {
