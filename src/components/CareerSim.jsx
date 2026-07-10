@@ -402,6 +402,26 @@ export default function CareerSim({ player, onRestart }) {
             </div>
           </div>
 
+          {/* Player Attributes */}
+          <div className="bg-[#111] border border-[#222] rounded-xl p-5 shadow-sm">
+            <div className="text-yellow-400 text-[10px] uppercase font-bold tracking-widest mb-4 flex justify-between">
+              <span>Attributes</span>
+            </div>
+            <div className="space-y-3">
+              {Object.entries(playerAttributes).map(([key, val]) => (
+                <div key={key}>
+                  <div className="flex justify-between text-[10px] uppercase text-white/50 mb-1">
+                    <span>{key}</span>
+                    <span className="text-white font-bold">{val}</span>
+                  </div>
+                  <div className="w-full bg-[#050505] h-1.5 rounded-full overflow-hidden border border-[#222]">
+                    <div className="bg-white h-full transition-all duration-1000" style={{ width: `${Math.min(100, val)}%` }}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
           {/* Current Season Stats */}
           {history.length > 0 && (
             <div className="bg-[#111] border border-[#222] rounded-xl p-5 shadow-sm">
